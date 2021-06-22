@@ -1,7 +1,7 @@
 ## 常用命令
 > 重要：推荐使用gcc 4.4.x版本
 
-## [ubuntu20_gcc_降级](./ubuntu20_gcc_降级_wubing9356的博客_CSDN博客)
+## [ubuntu20_gcc_降级](./ubuntu20_gcc_降级_wubing9356的博客_CSDN博客.md)
 
 ```
 gcc -m32 -c -o kernel/main.o kernel/main.c
