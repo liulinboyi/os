@@ -1,0 +1,151 @@
+     1                                  ; 主引导程序
+     2                                  ;-----------------------------------------------
+     3                                  %include "boot.inc"
+     4                              <1> ;---------------------------loader和kernel-------------
+     5                              <1> LOADER_BASE_ADDR equ 0x900
+     6                              <1> LOADER_START_SECTOR equ 0x2
+     7                              <1> 
+     8                              <1> ; gdt描述符属性
+     9                              <1> ; 段描述符高23位，表示段界限的粒度为4KB
+    10                              <1> DESC_G_4K equ 100000000000000000000000b   
+    11                              <1> 
+    12                              <1> ; D/B为，1表示运行在32位模式下
+    13                              <1> DESC_D_32 equ 10000000000000000000000b
+    14                              <1> ; 高21位，如果为1表示为64位代码段，目前我们都是在32位模式下操作，故为零
+    15                              <1> DESC_L equ     0000000000000000000000b
+    16                              <1> ; 没有明确的用途，取值随意
+    17                              <1> DESC_AVL equ   000000000000000000000b
+    18                              <1> ; 第二部分段界限值，由于采用了32位平坦模型，所以段界限为(4GB / 4KB) - 1 = 0xFFFFF，故为全1
+    19                              <1> DESC_LIMIT_CODE2 equ 11110000000000000000b
+    20                              <1> DESC_LIMIT_DATA2 equ DESC_LIMIT_CODE2
+    21                              <1> ; 书中取全零，怀疑是错误的，因为保护模式的基地址是0xb8000，所以最后8位应该是b，而不是0
+    22                              <1> DESC_LIMIT_VIDEO2 equ 00000000000000000000b
+    23                              <1> DESC_P equ 1000000000000000b
+    24                              <1> DESC_DPL_0 equ 000000000000000b
+    25                              <1> DESC_DPL_1 equ 010000000000000b
+    26                              <1> DESC_DPL_2 equ 100000000000000b
+    27                              <1> DESC_DPL_3 equ 110000000000000b
+    28                              <1> DESC_S_CODE equ  1000000000000b
+    29                              <1> DESC_S_DATA equ  DESC_S_CODE
+    30                              <1> DESC_S_sys equ  0000000000000b
+    31                              <1> DESC_TYPE_CODE equ 100000000000b
+    32                              <1> DESC_TYPE_DATA equ 001000000000b
+    33                              <1> 
+    34                              <1> ; 代码段描述符的高32位表示，其中(0x00 << 24表示最高8位的段基址值，由于我们采用的是平坦模型，故基址为零)，后面唯一可变的就是段界限值
+    35                              <1> DESC_CODE_HIGH4 equ (0x00 << 24) + DESC_G_4K + DESC_D_32 +     DESC_L + DESC_AVL + DESC_LIMIT_CODE2 +     DESC_P + DESC_DPL_0 + DESC_S_CODE + DESC_TYPE_CODE + 0x00
+    38                              <1> 
+    39                              <1> DESC_DATA_HIGH4 equ (0x00 << 24) + DESC_G_4K + DESC_D_32 +     DESC_L + DESC_AVL + DESC_LIMIT_DATA2 +     DESC_P + DESC_DPL_0 + DESC_S_DATA + DESC_TYPE_DATA + 0x00
+    42                              <1> 
+    43                              <1> DESC_VIDEO_HIGH4 equ (0x00 << 24) + DESC_G_4K + DESC_D_32 +     DESC_L + DESC_AVL + DESC_LIMIT_VIDEO2 +     DESC_P + DESC_DPL_0 + DESC_S_DATA + DESC_TYPE_DATA + 0x0b
+    46                              <1> 
+    47                              <1> ; 选择字属性
+    48                              <1> RPL0 equ 00b
+    49                              <1> RPL1 equ 01b
+    50                              <1> RPL2 equ 10b
+    51                              <1> RPL3 equ 11b
+    52                              <1> TI_GDT equ 000b
+    53                              <1> TI_LDT equ 100b
+     4                                  SECTION MBR vstart=0x7c00
+     5                                  
+     6 00000000 8CC8                        mov ax, cs
+     7 00000002 8ED8                        mov ds, ax
+     8 00000004 8EC0                        mov es, ax
+     9 00000006 8ED0                        mov ss, ax
+    10 00000008 8EE0                        mov fs, ax
+    11 0000000A BC007C                      mov sp, 0x7c00
+    12 0000000D B800B8                      mov ax, 0xb800
+    13 00000010 8EE8                        mov gs, ax
+    14                                  
+    15                                  ; 清屏
+    16                                  ;---------------------------------------------------
+    17 00000012 B80006                      mov ax, 0600h
+    18 00000015 BB0007                      mov bx, 0700h
+    19 00000018 B90000                      mov cx, 0
+    20 0000001B BA4F18                      mov dx, 184fh
+    21 0000001E CD10                        int 10h
+    22                                  
+    23                                      ; 显示"MBR"
+    24 00000020 65C606000031                mov byte [gs:0x00], '1'
+    25 00000026 65C6060100A4                mov byte [gs:0x01], 0xA4
+    26                                  
+    27 0000002C 65C606020020                mov byte [gs:0x02], ' '
+    28 00000032 65C6060300A4                mov byte [gs:0x03], 0xA4
+    29                                  
+    30 00000038 65C60604004D                mov byte [gs:0x04], 'M'
+    31 0000003E 65C6060500A4                mov byte [gs:0x05], 0xA4
+    32                                  
+    33 00000044 65C606060042                mov byte [gs:0x06], 'B'
+    34 0000004A 65C6060700A4                mov byte [gs:0x07], 0xA4
+    35                                  
+    36 00000050 65C606080041                mov byte [gs:0x08], 'A'
+    37 00000056 65C6060900A4                mov byte [gs:0x09], 0xA4
+    38                                  
+    39 0000005C 66B802000000                mov eax, LOADER_START_SECTOR ; 0x2
+    40 00000062 BB0009                      mov bx, LOADER_BASE_ADDR ; 0x900
+    41                                      
+    42                                      ; 读取4个扇区
+    43 00000065 B90400                      mov cx, 4
+    44 00000068 E80300                      call rd_disk_m_16
+    45                                  
+    46                                      ; 直接跳到loader的起始代码执行
+    47 0000006B E9(000C)                    jmp LOADER_BASE_ADDR + 0x300 ; direct jump to loader/loader_start 直接跳到loader/loader_start,具体原因在后面有写
+    48                                  
+    49                                  ;-----------------------------------------------------------
+    50                                  ; 读取磁盘的n个扇区，用于加载loader
+    51                                  ; eax保存从硬盘读取到的数据的保存地址，ebx为起始扇区，cx为读取的扇区数
+    52                                  rd_disk_m_16:
+    53                                  ;-----------------------------------------------------------
+    54                                  
+    55 0000006E 6689C6                      mov esi, eax
+    56 00000071 89CF                        mov di, cx
+    57                                  
+    58 00000073 BAF201                      mov dx, 0x1f2
+    59 00000076 88C8                        mov al, cl
+    60 00000078 EE                          out dx, al
+    61                                  
+    62 00000079 6689F0                      mov eax, esi
+    63                                  
+    64 0000007C BAF301                      mov dx, 0x1f3
+    65 0000007F EE                          out dx, al
+    66                                  
+    67 00000080 B108                        mov cl, 8
+    68 00000082 66D3E8                      shr eax, cl
+    69 00000085 BAF401                      mov dx, 0x1f4
+    70 00000088 EE                          out dx, al
+    71                                  
+    72 00000089 66D3E8                      shr eax, cl
+    73 0000008C BAF501                      mov dx, 0x1f5
+    74 0000008F EE                          out dx, al
+    75                                  
+    76 00000090 66D3E8                      shr eax, cl
+    77 00000093 240F                        and al, 0x0f
+    78 00000095 0CE0                        or al, 0xe0
+    79 00000097 BAF601                      mov dx, 0x1f6
+    80 0000009A EE                          out dx, al
+    81                                  
+    82 0000009B BAF701                      mov dx, 0x1f7
+    83 0000009E B020                        mov al, 0x20
+    84 000000A0 EE                          out dx, al
+    85                                  
+    86                                  .not_ready:
+    87 000000A1 90                          nop
+    88 000000A2 EC                          in al, dx
+    89 000000A3 2488                        and al, 0x88
+    90 000000A5 3C08                        cmp al, 0x08
+    91 000000A7 75F8                        jnz .not_ready
+    92                                  
+    93 000000A9 89F8                        mov ax, di
+    94 000000AB BA0001                      mov dx, 256
+    95 000000AE F7E2                        mul dx
+    96 000000B0 89C1                        mov cx, ax
+    97 000000B2 BAF001                      mov dx, 0x1f0
+    98                                  
+    99                                  .go_on_read:
+   100 000000B5 ED                          in ax, dx ; 每次读一个字,放到ax中
+   101 000000B6 8907                        mov [bx], ax ; 把ax的值传送到[bx]地址处
+   102 000000B8 83C302                      add bx, 2
+   103 000000BB E2F8                        loop .go_on_read
+   104 000000BD C3                          ret
+   105                                  
+   106 000000BE 00<rep 140h>                times 510-($-$$) db 0
+   107 000001FE 55AA                        db 0x55, 0xaa

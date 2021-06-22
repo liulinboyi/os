@@ -1,0 +1,149 @@
+     1                                  %include "boot.inc"
+     2                              <1> ;---------------------------loader和kernel-------------
+     3                              <1> LOADER_BASE_ADDR equ 0x900
+     4                              <1> LOADER_START_SECTOR equ 0x2
+     5                              <1> 
+     6                              <1> ; gdt描述符属性
+     7                              <1> ; 段描述符高23位，表示段界限的粒度为4KB
+     8                              <1> DESC_G_4K equ 100000000000000000000000b   
+     9                              <1> 
+    10                              <1> ; D/B为，1表示运行在32位模式下
+    11                              <1> DESC_D_32 equ 10000000000000000000000b
+    12                              <1> ; 高21位，如果为1表示为64位代码段，目前我们都是在32位模式下操作，故为零
+    13                              <1> DESC_L equ     0000000000000000000000b
+    14                              <1> ; 没有明确的用途，取值随意
+    15                              <1> DESC_AVL equ   000000000000000000000b
+    16                              <1> ; 第二部分段界限值，由于采用了32位平坦模型，所以段界限为(4GB / 4KB) - 1 = 0xFFFFF，故为全1
+    17                              <1> DESC_LIMIT_CODE2 equ 11110000000000000000b
+    18                              <1> DESC_LIMIT_DATA2 equ DESC_LIMIT_CODE2
+    19                              <1> ; 书中取全零，怀疑是错误的，因为保护模式的基地址是0xb8000，所以最后8位应该是b，而不是0
+    20                              <1> DESC_LIMIT_VIDEO2 equ 00000000000000000000b
+    21                              <1> DESC_P equ 1000000000000000b
+    22                              <1> DESC_DPL_0 equ 000000000000000b
+    23                              <1> DESC_DPL_1 equ 010000000000000b
+    24                              <1> DESC_DPL_2 equ 100000000000000b
+    25                              <1> DESC_DPL_3 equ 110000000000000b
+    26                              <1> DESC_S_CODE equ  1000000000000b
+    27                              <1> DESC_S_DATA equ  DESC_S_CODE
+    28                              <1> DESC_S_sys equ  0000000000000b
+    29                              <1> DESC_TYPE_CODE equ 100000000000b
+    30                              <1> DESC_TYPE_DATA equ 001000000000b
+    31                              <1> 
+    32                              <1> ; 代码段描述符的高32位表示，其中(0x00 << 24表示最高8位的段基址值，由于我们采用的是平坦模型，故基址为零)，后面唯一可变的就是段界限值
+    33                              <1> DESC_CODE_HIGH4 equ (0x00 << 24) + DESC_G_4K + DESC_D_32 +     DESC_L + DESC_AVL + DESC_LIMIT_CODE2 +     DESC_P + DESC_DPL_0 + DESC_S_CODE + DESC_TYPE_CODE + 0x00
+    36                              <1> 
+    37                              <1> DESC_DATA_HIGH4 equ (0x00 << 24) + DESC_G_4K + DESC_D_32 +     DESC_L + DESC_AVL + DESC_LIMIT_DATA2 +     DESC_P + DESC_DPL_0 + DESC_S_DATA + DESC_TYPE_DATA + 0x00
+    40                              <1> 
+    41                              <1> DESC_VIDEO_HIGH4 equ (0x00 << 24) + DESC_G_4K + DESC_D_32 +     DESC_L + DESC_AVL + DESC_LIMIT_VIDEO2 +     DESC_P + DESC_DPL_0 + DESC_S_DATA + DESC_TYPE_DATA + 0x0b
+    44                              <1> 
+    45                              <1> ; 选择字属性
+    46                              <1> RPL0 equ 00b
+    47                              <1> RPL1 equ 01b
+    48                              <1> RPL2 equ 10b
+    49                              <1> RPL3 equ 11b
+    50                              <1> TI_GDT equ 000b
+    51                              <1> TI_LDT equ 100b
+     2                                  
+     3                                  section loader vstart=LOADER_BASE_ADDR
+     4                                  ;LOADER_BASE_ADDR = 0x900
+     5                                  ;此处虚拟头结点是0x900
+     6                                  LOADER_STACK_TOP equ LOADER_BASE_ADDR
+     7                                  
+     8                                  ; 这里其实就是GDT的起始地址，第一个描述符为空
+     9 00000000 00000000                GDT_BASE: dd 0x00000000
+    10 00000004 00000000                          dd 0x00000000
+    11                                  
+    12                                  ; 代码段描述符，一个dd为4字节，段描述符为8字节，上面为低4字节
+    13 00000008 FFFF0000                CODE_DESC: dd 0x0000FFFF
+    14 0000000C 0098CF00                           dd DESC_CODE_HIGH4
+    15                                  
+    16                                  ; 栈段描述符，和数据段共用
+    17 00000010 FFFF0000                DATA_STACK_DESC: dd 0x0000FFFF
+    18 00000014 0092CF00                                 dd DESC_DATA_HIGH4
+    19                                  
+    20                                  ; 显卡段，非平坦
+    21 00000018 07000080                VIDEO_DESC: dd 0x80000007
+    22 0000001C 0B92C000                            dd DESC_VIDEO_HIGH4
+    23                                  
+    24                                  GDT_SIZE equ $ - GDT_BASE
+    25                                  GDT_LIMIT equ GDT_SIZE - 1
+    26 00000020 00000000<rep 78h>       times 120 dd 0 ; 预留60个段描述槽位
+    27                                  SELECTOR_CODE equ (0x0001 << 3) + TI_GDT + RPL0
+    28                                  SELECTOR_DATA equ (0x0002 << 3) + TI_GDT + RPL0
+    29                                  SELECTOR_VIDEO equ (0x0003 << 3) + TI_GDT + RPL0
+    30                                  
+    31                                  ; 内存大小，单位字节，此处的内存地址是0xb00
+    32                                  ; total_memory_bytes用于保存内存容量，以字节为单位，此位置比较好记
+    33                                  ; 当前偏移loader.bin文件头0x200字节
+    34                                  ; loader.bin的加载地址是0x900
+    35                                  ; 故total_memory_bytes内存中的地址是0xb00
+    36                                  ; 将来在内核中咱们会引用此地址
+    37                                  
+    38                                  ; 段描述符大小是8字节，dq也是8字节，所以偏移量是 (4+60)*8=512=0x200字节
+    39                                  ; 本程序的加载地址是0x900，0x900+0x200=0xb00，所以0xb00便是变量total_mem_bytes加载到内存中的地址。
+    40                                  
+    41 00000200 00000000                total_memory_bytes dd 0 ; 4字节
+    42                                  
+    43 00000204 1F00                    gdt_ptr dw GDT_LIMIT
+    44 00000206 [00000000]                      dd GDT_BASE
+    45                                  ; 6字节 dw 字两个字节 dd 双字 4个字节
+    46                                  
+    47 0000020A 00<rep F4h>             ards_buf times 244 db 0 ; 244字节
+    48 000002FE 0000                    ards_nr dw 0 ; 2字节
+    49                                  
+    50                                  ; total_mem_bytes是4字节，gdt_ptr是6字节，ards_buf是244字节，ards_nr是2字节，加起来的和是256字节，即0x100。
+    51                                  ; 加上total_mem_bytes在文件内偏移地址是0x200，所以loader_start在文件内的偏移地址是0x100+0x200=0x300。
+    52                                  loader_start: 
+    53                                  
+    54 00000300 6631DB                      xor ebx, ebx ; ;第一次调用时，ebx值要为0
+    55 00000303 66BA50414D53                mov edx, 0x534d4150 ; edx只赋值一次，循环体中不会改变
+    56 00000309 BF[0A02]                    mov di, ards_buf ; ards结构缓冲区
+    57                                  
+    58                                  .e820_mem_get_loop: ; 循环获取每个ARDS内存范围描述结构
+    59                                      ;执行int 0x15后，eax值变为0x534d4150，
+    60                                      ;所以每次执行int前都要更新为子功能号
+    61 0000030C 66B820E80000                mov eax, 0x0000e820 
+    62 00000312 66B914000000                mov ecx, 20 ; ARDS地址范围描述符结构大小是20字节
+    63 00000318 CD15                        int 0x15 ; 调用中断
+    64                                      
+    65 0000031A 7232                        jc .e820_mem_get_failed ; 条件转移指令jc,若cf位为1则有错误发生，尝试0xe801子功能
+    66                                      
+    67 0000031C 01CF                        add di, cx ; 使di增加20字节指向缓冲区中新的ARDS结构位置
+    68 0000031E FF06[FE02]                  inc word [ards_nr]
+    69 00000322 6683FB00                    cmp ebx, 0
+    70 00000326 75E4                        jnz .e820_mem_get_loop
+    71                                  
+    72 00000328 8B0E[FE02]                  mov cx, [ards_nr]
+    73 0000032C 66BB[0A020000]              mov ebx, ards_buf
+    74 00000332 6631D2                      xor edx, edx
+    75                                  
+    76                                  .find_max_mem_area:
+    77 00000335 66678B03                    mov eax, [ebx]
+    78 00000339 6667034308                  add eax, [ebx + 8]
+    79 0000033E 6683C314                    add ebx, 20
+    80 00000342 6639C2                      cmp edx, eax
+    81 00000345 7D03                        jge .next_ards
+    82 00000347 6689C2                      mov edx, eax
+    83                                  
+    84                                  .next_ards:
+    85 0000034A E2E9                        loop .find_max_mem_area
+    86 0000034C EB26                        jmp .mem_get_ok
+    87                                  
+    88                                  .e820_mem_get_failed:
+    89 0000034E 65C606000066                mov byte [gs:0], 'f'
+    90 00000354 65C606020061                mov byte [gs:2], 'a'
+    91 0000035A 65C606040069                mov byte [gs:4], 'i'
+    92 00000360 65C60606006C                mov byte [gs:6], 'l'
+    93 00000366 65C606080065                mov byte [gs:8], 'e'
+    94 0000036C 65C6060A0064                mov byte [gs:10], 'd'
+    95 00000372 EB05                        jmp .done
+    96                                  
+    97                                  .mem_get_ok:
+    98 00000374 668916[0002]                mov [total_memory_bytes], edx
+    99                                  
+   100                                  .done:
+   101 00000379 65C606A00064                mov byte [gs:160], 'd'
+   102 0000037F 65C606A2006F                mov byte [gs:162], 'o'
+   103 00000385 65C606A4006E                mov byte [gs:164], 'n'
+   104 0000038B 65C606A60065                mov byte [gs:166], 'e'
+   105 00000391 EBFE                        jmp $
