@@ -4,6 +4,8 @@
 
 > 代码均可运行
 
+## [随书代码](./elephant)
+
 ## [chapter3](./chapter3)
 
 ## [chapter4](./chapter4)
