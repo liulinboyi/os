@@ -17,7 +17,7 @@ deb http://dk.archive.ubuntu.com/ubuntu/ trusty main universe
 sudo apt-get update  
 4. 安装 gcc 和 g++
 
-sudo apt-get install gcc-4.4 g+±4.4 g+±4.4-multilib
+sudo apt-get install gcc-4.4 g++4.4 g++4.4-multilib
 
 成功后检查版本发现还是最新的版本 (我的版本是 gcc-9)
 
