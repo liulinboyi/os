@@ -18,7 +18,7 @@ global put_int
 
 put_int:
     pushad ; 备份32位寄存器环境
-    mov ebp, esp
+    mov ebp, esp ; 借鉴C调用约定，先把栈顶esp赋值给ebp，再通过ebp来获取参数
     mov eax, [ebp + 4 * 9] ; call的返回地址占4字节+pushad的8个4字节
     mov edx, eax
     mov edi, 7 ; 指定在put_int_buffer中初始的偏移量
