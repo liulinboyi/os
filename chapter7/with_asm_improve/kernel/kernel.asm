@@ -38,7 +38,7 @@ intr%1entry: ; 标号，也就是地址，这是中断处理程序的起始处�
     push %1
     push eax
     mov eax, [inter_rupt_call_in_asm] ;取地址里面的值
-    call [eax + %1]
+    call [eax + 4 * %1] ; 函数地址为4个字节32位
     pop eax
     add esp, 4
     
