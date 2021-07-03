@@ -59,7 +59,7 @@ static void make_idt_desc(struct gate_desc* p_gdesc, uint8_t attr, intr_handler 
 }
 
 
-void process(char type) {
+void process(uint8_t type) {
     put_str("interrupt occur!\n");
     put_int(type);
     put_str("\n");

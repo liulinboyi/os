@@ -38,7 +38,7 @@ intr%1entry: ; 标号，也就是地址，这是中断处理程序的起始处�
     push %1
     push eax
     mov eax, [inter_rupt_call_in_asm] ;取地址里面的值
-    call [eax + 4 * %1] ; 函数地址为4个字节32位
+    call [eax + 4 * %1] ; 地址为4个字节32位
     pop eax
     add esp, 4
     
@@ -59,36 +59,36 @@ section .data ; 编译器会将属性相同的section合并到同一个大的seg
 
 
 ; 有的中断不会压入错误码，有的会压入错误码入栈，所以将不会压入错误码的中断压入一个32位数，在iret指令执行前我们再将栈顶的数据（错误码或手工压入的32位数）跨过就万事大吉了。
-VECTOR 0x00, ZERO
-VECTOR 0x01, ZERO
-VECTOR 0x02, ZERO
-VECTOR 0x03, ZERO
-VECTOR 0x04, ZERO
-VECTOR 0x05, ZERO
-VECTOR 0x06, ZERO
-VECTOR 0x07, ZERO
-VECTOR 0x08, ZERO
-VECTOR 0x09, ZERO
-VECTOR 0x0a, ZERO
-VECTOR 0x0b, ZERO
-VECTOR 0x0c, ZERO
-VECTOR 0x0d, ZERO
-VECTOR 0x0e, ZERO
-VECTOR 0x0f, ZERO
-VECTOR 0x10, ZERO
-VECTOR 0x11, ZERO
-VECTOR 0x12, ZERO
-VECTOR 0x13, ZERO
-VECTOR 0x14, ZERO
-VECTOR 0x15, ZERO
-VECTOR 0x16, ZERO
-VECTOR 0x17, ZERO
-VECTOR 0x18, ZERO
-VECTOR 0x19, ZERO
-VECTOR 0x1a, ZERO
-VECTOR 0x1b, ZERO
-VECTOR 0x1c, ZERO
-VECTOR 0x1d, ZERO
-VECTOR 0x1e, ERROR_CODE ; 调用宏VECTOR的两个地方 第1个参数0x1e是中断向量号，用来表示：本宏是为了此中断向量号而定义的中断处理程序，或者说这是本宏实现的中断处理程序对应的中断向量号，总之将来咱们要把它装载到中断描述符表中以该中断向量号为索引的中断门描述符位置。 第2个参数ERROR_CODE也是个宏
-VECTOR 0x1f, ZERO ; 调用宏VECTOR的两个地方 第1个参数0x1f是中断向量号，第2个参数是ZERO，它也是个宏 ZERO的值是push 0，是“把0压入栈”这个操作。
-VECTOR 0x20, ZERO
+VECTOR 0x00,ZERO
+VECTOR 0x01,ZERO
+VECTOR 0x02,ZERO
+VECTOR 0x03,ZERO 
+VECTOR 0x04,ZERO
+VECTOR 0x05,ZERO
+VECTOR 0x06,ZERO
+VECTOR 0x07,ZERO 
+VECTOR 0x08,ERROR_CODE
+VECTOR 0x09,ZERO
+VECTOR 0x0a,ERROR_CODE
+VECTOR 0x0b,ERROR_CODE 
+VECTOR 0x0c,ZERO
+VECTOR 0x0d,ERROR_CODE
+VECTOR 0x0e,ERROR_CODE
+VECTOR 0x0f,ZERO 
+VECTOR 0x10,ZERO
+VECTOR 0x11,ERROR_CODE
+VECTOR 0x12,ZERO
+VECTOR 0x13,ZERO 
+VECTOR 0x14,ZERO
+VECTOR 0x15,ZERO
+VECTOR 0x16,ZERO
+VECTOR 0x17,ZERO 
+VECTOR 0x18,ERROR_CODE
+VECTOR 0x19,ZERO
+VECTOR 0x1a,ERROR_CODE
+VECTOR 0x1b,ERROR_CODE 
+VECTOR 0x1c,ZERO
+VECTOR 0x1d,ERROR_CODE
+VECTOR 0x1e,ERROR_CODE; 调用宏VECTOR的两个地方 第1个参数0x1e是中断向量号，用来表示：本宏是为了此中断向量号而定义的中断处理程序，或者说这是本宏实现的中断处理程序对应的中断向量号，总之将来咱们要把它装载到中断描述符表中以该中断向量号为索引的中断门描述符位置。 第2个参数ERROR_CODE也是个宏
+VECTOR 0x1f,ZERO ; 调用宏VECTOR的两个地方 第1个参数0x1f是中断向量号，第2个参数是ZERO，它也是个宏 ZERO的值是push 0，是“把0压入栈”这个操作。
+VECTOR 0x20,ZERO
