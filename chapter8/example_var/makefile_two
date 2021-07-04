@@ -1,0 +1,13 @@
+build/%.o:src/%.c # 用%.o匹配所有的.o文件 依赖文件中用%.c匹配所有“合适”的.c文件
+	@gcc -c -o $@ $^
+objfiles = build/test1.o build/test2.o
+dist/test.bin:$(objfiles)
+	@gcc -o $@ $^
+all:dist/test.bin
+	@echo "compile done"
+
+PHONY:clean
+clean:
+	@rm -rf ./build/*.o ./dist/*.bin
+	@echo "clean done"
+
