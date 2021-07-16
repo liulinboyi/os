@@ -1,0 +1,15 @@
+{
+    "files.associations": {
+        "*.cjson": "jsonc",
+        "*.wxss": "css",
+        "*.wxs": "javascript",
+        "*.ttss": "css",
+        "debug.h": "c",
+        "global.h": "c",
+        "interrupt.h": "c",
+        "print.h": "c",
+        "string.h": "c",
+        "stdint.h": "c",
+        "bitmap.h": "c"
+    }
+}

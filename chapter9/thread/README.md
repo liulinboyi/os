@@ -1,0 +1,3 @@
+```
+bochs -f bochsrc
+```
