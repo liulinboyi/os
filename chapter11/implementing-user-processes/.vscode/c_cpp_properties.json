@@ -4,7 +4,7 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/home/xiaoliu/elephant/code/c11/b/kernel/"
+                "${workspaceFolder}/kernel/"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",

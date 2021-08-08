@@ -4,8 +4,8 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/home/xiaoliu/elephant/code/c12/a/lib/user/",
-                "/home/xiaoliu/elephant/code/c12/a/kernel/"
+                "${workspaceFolder}/lib/user/",
+                "${workspaceFolder}/kernel/"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",
