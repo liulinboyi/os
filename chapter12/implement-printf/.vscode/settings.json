@@ -1,0 +1,20 @@
+{
+    "files.associations": {
+        "interrupt.h": "c",
+        "global.h": "c",
+        "stdio.h": "c",
+        "string.h": "c",
+        "syscall.h": "c",
+        "print.h": "c",
+        "*.tcc": "c",
+        "exception": "c",
+        "fstream": "c",
+        "iosfwd": "c",
+        "new": "c",
+        "ostream": "c",
+        "sstream": "c",
+        "streambuf": "c",
+        "memory_resource": "c",
+        "stdint.h": "c"
+    }
+}
